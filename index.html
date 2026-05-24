@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For You — A Bicycle Ride</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Reenie+Beanie&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --cream: #faf6f1;
+            --dusty-rose: #c49090;
+            --warm-gold: #c9a87c;
+            --sage: #9caf88;
+            --twilight: #8b7b8b;
+            --deep-rose: #b08080;
+            --ink: #5a4a4a;
+        }
+
+        body {
+            font-family: 'Cormorant Garamond', serif;
+            background: var(--cream);
+            color: var(--ink);
+            overflow-x: hidden;
+            cursor: default;
+        }
+
+        /* Film Grain */
+        .grain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.035;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* Vignette */
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(90, 74, 74, 0.12) 100%);
+        }
+
+        /* Opening */
+        #opening {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #f5e6d3 0%, #e8d5c4 40%, #d4a5a5 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 500;
+            transition: opacity 2.5s ease, visibility 2.5s;
+        }
+
+        #opening.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .opening-text {
+            font-family: 'Reenie Beanie', cursive;
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            color: #7a5a5a;
+            text-align: center;
+            max-width: 600px;
+            padding: 0 2rem;
+            line-height: 1.5;
+            animation: fadeInUp 2.5s ease;
+        }
+
+        .start-btn {
+            margin-top: 3rem;
+            padding: 1rem 3.5rem;
+            background: transparent;
+            border: 1px solid rgba(122, 90, 90, 0.4);
+            color: #7a5a5a;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.8s ease;
+            opacity: 0;
+            animation: fadeInUp 2s ease 1.5s forwards;
+        }
+
+        .start-btn:hover {
+            background: rgba(122, 90, 90, 0.08);
+            letter-spacing: 6px;
+            border-color: rgba(122, 90, 90, 0.7);
+        }
+
+        /* Journey */
+        #journey {
+            display: none;
+            position: relative;
+        }
+
+        #journey.active {
+            display: block;
+        }
+
+        .sky {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            transition: background 4s ease;
+        }
+
+        .sky.golden { background: linear-gradient(180deg, #fce4d6 0%, #f5d5c5 50%, #e8c4b8 100%); }
+        .sky.sunset { background: linear-gradient(180deg, #f5d5c5 0%, #e8b4a8 50%, #d4a5a5 100%); }
+        .sky.dusk { background: linear-gradient(180deg, #d4a5a5 0%, #b890a0 50%, #9a7a8a 100%); }
+        .sky.night { background: linear-gradient(180deg, #8b7b8b 0%, #6b5b6b 50%, #5a4a5a 100%); }
+
+        /* Floating petals */
+        .petal {
+            position: fixed;
+            width: 12px;
+            height: 8px;
+            background: rgba(196, 144, 144, 0.5);
+            border-radius: 50% 0 50% 0;
+            pointer-events: none;
+            animation: drift 18s infinite linear;
+            z-index: 5;
+            opacity: 0;
+        }
+
+        @keyframes drift {
+            0% { transform: translateY(110vh) translateX(0) rotate(0deg); opacity: 0; }
+            8% { opacity: 0.7; }
+            92% { opacity: 0.7; }
+            100% { transform: translateY(-10vh) translateX(80px) rotate(720deg); opacity: 0; }
+        }
+
+        /* Ground */
+        .ground {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 22vh;
+            background: linear-gradient(180deg, transparent 0%, rgba(156, 175, 136, 0.25) 40%, rgba(139, 123, 139, 0.15) 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Flower Stops */
+        .stop {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding: 2rem;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stop.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .stop-label {
+            font-family: 'Reenie Beanie', cursive;
+            font-size: 1.4rem;
+            color: rgba(90, 74, 74, 0.45);
+            margin-bottom: 1.5rem;
+            letter-spacing: 1px;
+        }
+
+        /* PHOTO FRAME STYLING */
+        .flower-photo {
+            width: clamp(220px, 55vw, 340px);
+            aspect-ratio: 1;
+            margin-bottom: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            border: 8px solid #fff;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+            transform: rotate(-2deg);
+            transition: all 0.8s ease;
+            background: #f0e6dc;
+        }
+
+        .flower-photo:hover {
+            transform: rotate(0deg) scale(1.02);
+            box-shadow: 0 18px 40px rgba(0,0,0,0.14);
+        }
+
+        .flower-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            filter: sepia(15%) saturate(90%);
+            transition: filter 0.6s ease;
+        }
+
+        .flower-photo:hover img {
+            filter: sepia(0%) saturate(100%);
+        }
+
+        .flower-title {
+            font-family: 'Reenie Beanie', cursive;
+            font-size: clamp(2.2rem, 6vw, 4rem);
+            color: #7a5a5a;
+            margin-bottom: 2rem;
+            letter-spacing: 3px;
+        }
+
+        .flower-poem {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.2rem, 2.8vw, 1.7rem);
+            font-style: italic;
+            font-weight: 300;
+            color: #6a5a5a;
+            max-width: 520px;
+            text-align: center;
+            line-height: 1.9;
+            padding: 0 1.5rem;
+            position: relative;
+        }
+
+        .flower-poem::before,
+        .flower-poem::after {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 1px;
+            background: rgba(196, 144, 144, 0.4);
+            top: 50%;
+        }
+
+        .flower-poem::before {
+            left: -20px;
+        }
+
+        .flower-poem::after {
+            right: -20px;
+        }
+
+        .scroll-prompt {
+            position: absolute;
+            bottom: 2.5rem;
+            font-family: 'Reenie Beanie', cursive;
+            font-size: 1.3rem;
+            color: rgba(90, 74, 74, 0.35);
+            animation: gentleBounce 2.5s infinite;
+        }
+
+        @keyframes gentleBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        /* Finale */
+        #finale {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem 2rem;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 2s ease;
+        }
+
+        #finale.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .polaroid-frame {
+            background: #fff;
+            padding: 1.2rem 1.2rem 4rem 1.2rem;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+            transform: rotate(-3deg);
+            max-width: 340px;
+            width: 90%;
+            margin-bottom: 3rem;
+            transition: all 0.8s ease;
+        }
+
+        .polaroid-frame:hover {
+            transform: rotate(0deg) scale(1.02);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        }
+
+        .polaroid-photo {
+            width: 100%;
+            aspect-ratio: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .polaroid-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            filter: sepia(10%) saturate(95%);
+            transition: filter 0.6s ease;
+        }
+
+        .polaroid-frame:hover .polaroid-photo img {
+            filter: sepia(0%) saturate(100%);
+        }
+
+        .polaroid-photo::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(255,255,255,0.03) 2px,
+                rgba(255,255,255,0.03) 4px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .polaroid-text {
+            font-family: 'Reenie Beanie', cursive;
+            font-size: 1.5rem;
+            color: #5a4a4a;
+            text-align: center;
+            margin-top: 2rem;
+            letter-spacing: 1px;
+        }
+
+        .closing-words {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.3rem, 3.2vw, 2rem);
+            font-style: italic;
+            font-weight: 300;
+            color: #faf6f1;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.9;
+            padding: 0 2rem;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.25);
+            margin-bottom: 2rem;
+        }
+
+        .heart-secret {
+            font-size: 2.2rem;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: all 0.8s ease;
+            margin-top: 2rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+
+        .heart-secret:hover {
+            opacity: 1;
+            transform: scale(1.15);
+        }
+
+        .hidden-letter {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 1.2s ease, opacity 1.2s ease, margin 1s ease;
+            opacity: 0;
+            margin-top: 0;
+        }
+
+        .hidden-letter.open {
+            max-height: 300px;
+            opacity: 1;
+            margin-top: 2rem;
+        }
+
+        .letter-text {
+            font-family: 'Reenie Beanie', cursive;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            color: #faf6f1;
+            text-align: center;
+            line-height: 1.6;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            padding: 0 1rem;
+        }
+
+        /* Progress Dots */
+        .progress-track {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+            z-index: 100;
+        }
+
+        .progress-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(90, 74, 74, 0.15);
+            transition: all 0.8s ease;
+        }
+
+        .progress-dot.active {
+            background: rgba(196, 144, 144, 0.8);
+            transform: scale(1.6);
+            box-shadow: 0 0 8px rgba(196, 144, 144, 0.3);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Mobile */
+        @media (max-width: 600px) {
+            .progress-track {
+                top: 1rem;
+                right: 1rem;
+            }
+            .flower-photo {
+                border-width: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grain"></div>
+    <div class="vignette"></div>
+
+    <!-- Floating petals -->
+    <div class="petal" style="left: 8%; animation-delay: 0s;"></div>
+    <div class="petal" style="left: 25%; animation-delay: 4s; width: 10px; height: 7px;"></div>
+    <div class="petal" style="left: 45%; animation-delay: 8s;"></div>
+    <div class="petal" style="left: 65%; animation-delay: 2s; width: 14px; height: 9px; background: rgba(201, 168, 124, 0.5);"></div>
+    <div class="petal" style="left: 82%; animation-delay: 6s;"></div>
+    <div class="petal" style="left: 15%; animation-delay: 11s; width: 9px; height: 6px;"></div>
+
+    <!-- Opening -->
+    <div id="opening">
+        <div class="opening-text">
+            Ik i cant be with u rn baby<br>
+             but i still wanted to get u flowers so i made this
+        </div>
+        <button class="start-btn" onclick="beginRide()">enter</button>
+    </div>
+
+    <!-- Journey -->
+    <div id="journey">
+        <div class="sky golden" id="sky"></div>
+        <div class="ground"></div>
+
+        <div class="progress-track" id="progress">
+            <div class="progress-dot active"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
+        </div>
+
+        <!-- Stop 1: Lilies -->
+        <div class="stop" data-index="0">
+            <div class="stop-label">the first stop</div>
+            <div class="flower-photo">
+                <img src="lilies.jpg" alt="Lilies">
+            </div>
+            <div class="flower-title">Lilies</div>
+            <div class="flower-poem">
+                For the way you light up every room,<br>
+                even the ones we're not in together.
+            </div>
+            <div class="scroll-prompt">scroll gently ↓</div>
+        </div>
+
+        <!-- Stop 2: Lily of the Valley -->
+        <div class="stop" data-index="1">
+            <div class="stop-label">the second stop</div>
+            <div class="flower-photo">
+                <img src="lilly of the valley.jpeg" alt="Lily of the Valley">
+            </div>
+            <div class="flower-title">Lily of the Valley</div>
+            <div class="flower-poem">
+                For your quiet strength.<br>
+                You don't even know how brave you are.
+            </div>
+            <div class="scroll-prompt">scroll gently ↓</div>
+        </div>
+
+        <!-- Stop 3: Weeping Begonias -->
+        <div class="stop" data-index="2">
+            <div class="stop-label">the third stop</div>
+            <div class="flower-photo">
+                <img src="weeeping flowers.jpg" alt="Weeping Begonias">
+            </div>
+            <div class="flower-title">Weeping Begonias</div>
+            <div class="flower-poem">
+                Because missing you feels like beautiful rain —<<br>
+                it hurts, but it means something real.
+            </div>
+            <div class="scroll-prompt">scroll gently ↓</div>
+        </div>
+
+        <!-- Stop 4: Peonies -->
+        <div class="stop" data-index="3">
+            <div class="stop-label">the fourth stop</div>
+            <div class="flower-photo">
+                <img src="PEONIES.jpg" alt="Peonies">
+            </div>
+            <div class="flower-title">Peonies</div>
+            <div class="flower-poem">
+                For all the softness you carry<br>
+                in a world that tries to make you hard.
+            </div>
+            <div class="scroll-prompt">scroll gently ↓</div>
+        </div>
+
+        <!-- Stop 5: Magnolias -->
+        <div class="stop" data-index="4">
+            <div class="stop-label">the fifth stop</div>
+            <div class="flower-photo">
+                <img src="mangolia.jpg" alt="Magnolias">
+            </div>
+            <div class="flower-title">Magnolias</div>
+            <div class="flower-poem">
+                For your dignity and grace.<br>
+                You make me want to be better.
+            </div>
+            <div class="scroll-prompt">scroll gently ↓</div>
+        </div>
+
+        <!-- Stop 6: Spider Lilies -->
+        <div class="stop" data-index="5">
+            <div class="stop-label">the sixth stop</div>
+            <div class="flower-photo">
+                <img src="spider lilly.jpg" alt="Spider Lilies">
+            </div>
+            <div class="flower-title">Spider Lilies</div>
+            <div class="flower-poem">
+                For the memories that bloom in the spaces between us.<br>
+                I'd wait forever in the in-between.
+            </div>
+            <div class="scroll-prompt">scroll gently ↓</div>
+        </div>
+
+        <!-- Stop 7: Roses -->
+        <div class="stop" data-index="6">
+            <div class="stop-label">the last stop</div>
+            <div class="flower-photo">
+                <img src="rose.jpg" alt="Roses">
+            </div>
+            <div class="flower-title">Roses</div>
+            <div class="flower-poem">
+                For the obvious reason.<br>
+                I love you. That's never going to change.
+            </div>
+            <div class="scroll-prompt">one more scroll ↓</div>
+        </div>
+
+        <!-- Finale -->
+        <div id="finale">
+            <div class="polaroid-frame">
+                <div class="polaroid-photo">
+                    <img src="SS.jpg" alt="us">
+                </div>
+                <div class="polaroid-text">why i chose those flowers heh</div>
+            </div>
+            <div class="closing-words">
+                IU LOVE U SO MUCH BABY<br>
+                MMMMMMMMMMMMMMMMMMMMMMWAH
+            </div>
+            <div class="heart-secret" onclick="revealSecret()" id="heart">🤍</div>
+            <div class="hidden-letter" id="secret">
+                <div class="letter-text">
+                    I miss you in ways I haven't learned to say yet.<br>
+                    But I'm learning. For you, I'm learning.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function beginRide() {
+            const opening = document.getElementById('opening');
+            opening.classList.add('hidden');
+            document.getElementById('journey').classList.add('active');
+            
+            setTimeout(() => {
+                document.querySelector('.stop').classList.add('visible');
+            }, 600);
+        }
+
+        function revealSecret() {
+            document.getElementById('secret').classList.add('open');
+            document.getElementById('heart').innerHTML = '❤️';
+            document.getElementById('heart').style.opacity = '1';
+        }
+
+        // Intersection Observer
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    const index = parseInt(entry.target.dataset?.index);
+                    if (!isNaN(index)) {
+                        updateProgress(index);
+                        updateSky(index);
+                    }
+                }
+            });
+        }, { threshold: 0.35, rootMargin: '0px 0px -80px 0px' });
+
+        document.querySelectorAll('.stop').forEach(stop => observer.observe(stop));
+        observer.observe(document.getElementById('finale'));
+
+        function updateProgress(index) {
+            document.querySelectorAll('.progress-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i <= index);
+            });
+        }
+
+        function updateSky(index) {
+            const phases = ['golden', 'golden', 'sunset', 'sunset', 'dusk', 'dusk', 'night'];
+            document.getElementById('sky').className = 'sky ' + phases[index];
+        }
+    </script>
+</body>
+</html>
